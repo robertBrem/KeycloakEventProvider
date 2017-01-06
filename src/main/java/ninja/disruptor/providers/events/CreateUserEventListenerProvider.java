@@ -10,14 +10,20 @@ import javax.ws.rs.client.Client;
 import javax.ws.rs.client.ClientBuilder;
 import javax.ws.rs.client.Entity;
 import javax.ws.rs.client.WebTarget;
-import java.io.IOException;
 import java.util.concurrent.CompletableFuture;
 
 @NoArgsConstructor
 public class CreateUserEventListenerProvider implements EventListenerProvider {
 
+    public static final String CLIENT_ID = System.getenv("KEYCLOAK_CLIENT");
+    public static final String REALM = System.getenv("REALM_NAME");
+    public static final String KEYCLOAK_URL = System.getenv("KEYCLOAK_URL");
+    public static final String APPLICATION_USER_NAME = System.getenv("APPLICATION_USER_NAME");
+    public static final String APPLICATION_PASSWORD = System.getenv("APPLICATION_PASSWORD");
+    public static final String APPLICATION_URL = System.getenv("APPLICATION_URL");
+
     private Client client = ClientBuilder.newClient();
-    private WebTarget target = client.target(System.getenv("APPLICATION_URL"));
+    private WebTarget target = client.target(APPLICATION_URL);
 
     @Override
     public void onEvent(final Event event) {
@@ -28,16 +34,13 @@ public class CreateUserEventListenerProvider implements EventListenerProvider {
     }
 
     private void createUser(Event event) {
-        String token = null;
-        try {
-            token = KeycloakTokenCreator
-                    .getTokenResponse(
-                            System.getenv("APPLICATION_USER_NAME"),
-                            System.getenv("APPLICATION_PASSWORD"))
-                    .getToken();
-        } catch (IOException e) {
-            e.printStackTrace();
-            return;
+        KeycloakTokenCreator tokenCreator = new KeycloakTokenCreator(CLIENT_ID, REALM, KEYCLOAK_URL);
+        String token = tokenCreator
+                .getTokenResponse(APPLICATION_USER_NAME, APPLICATION_PASSWORD)
+                .getToken();
+
+        if (token == null) {
+            throw new IllegalArgumentException("No Token available!");
         }
 
         User userToCreate = new User();
